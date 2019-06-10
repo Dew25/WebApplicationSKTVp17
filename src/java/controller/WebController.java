@@ -18,6 +18,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import session.BookFacade;
 import session.HistoryFacade;
 import session.ReaderFacade;
@@ -30,13 +31,14 @@ import session.ReaderFacade;
     "/showAddBook",
     "/createBook",
     "/listBooks",
-    "/showAddReader",
-    "/createReader",
     "/listReaders",
     "/showTakeBook",
     "/createHistory",
     "/showReturnBook",
     "/returnBook",
+    "/showBook",
+    "/showReader",
+    
     
     
 })
@@ -50,7 +52,22 @@ public class WebController extends HttpServlet {
             throws ServletException, IOException {
         response.setContentType("text/html;charset=UTF-8");
         request.setCharacterEncoding("UTF-8");
+        Calendar c = new GregorianCalendar();
         String path = request.getServletPath();
+        
+        HttpSession session = request.getSession(false);
+        if(session == null){
+            request.getRequestDispatcher("/showLogin.jsp")
+                        .forward(request, response);
+                return;
+        }
+        String enteredUser = (String) session.getAttribute("enteredUser");
+        if(!"admin".equals(enteredUser)){
+            request.getRequestDispatcher("/showLogin.jsp")
+                        .forward(request, response);
+                return;
+        }
+        
         switch (path) {
             case "/showAddBook":
                 request.getRequestDispatcher("/showAddBook.jsp")
@@ -77,32 +94,37 @@ public class WebController extends HttpServlet {
             case "/listBooks":
                 List<Book> listBooks = bookFacade.findAll();
                 request.setAttribute("listBooks", listBooks);
+                request.setAttribute("count",listBooks.size());
                 request.getRequestDispatcher("/listBooks.jsp")
                         .forward(request, response);
                 break;
-            case "/showAddReader":
-                request.getRequestDispatcher("/showAddReader.jsp")
+            case "/showBook":
+                String bookId = request.getParameter("bookId");
+                book = bookFacade.find(new Long(bookId));
+                request.setAttribute("book", book);
+                
+                request.getRequestDispatcher("/showBook.jsp")
                         .forward(request, response);
                 break;
-            case "/createReader":
-                name=request.getParameter("name");
-                String surname = request.getParameter("surname");
-                String phone = request.getParameter("phone");
-                Reader reader = new Reader(
-                        name, 
-                        surname, 
-                        phone
-                );
-                readerFacade.create(reader);
-                request.getRequestDispatcher("/index.jsp")
-                        .forward(request, response);
-                break;
+            
+                
             case "/listReaders":
                 List<Reader> listReaders = readerFacade.findAll();
                 request.setAttribute("listReaders", listReaders);
+                request.setAttribute("count",listReaders.size());
                 request.getRequestDispatcher("/listReaders.jsp")
                         .forward(request, response);
-                break;  
+                break; 
+            case "/showReader":
+                String readerId = request.getParameter("readerId");
+                Reader reader = readerFacade.find(new Long(readerId));
+                request.setAttribute("reader", reader);
+                List<History> listHistories = historyFacade.findNotReturnBooks(reader);
+                request.setAttribute("listHistories", listHistories);
+                request.getRequestDispatcher("/showReader.jsp")
+                        .forward(request, response);
+                break;
+                
             case "/showTakeBook":
                 listReaders = readerFacade.findAll();
                 request.setAttribute("listReaders", listReaders);
@@ -112,25 +134,41 @@ public class WebController extends HttpServlet {
                         .forward(request, response);
                 break;
             case "/createHistory":
-                String readerId = request.getParameter("readerId");
-                String bookId = request.getParameter("bookId");
+                readerId = request.getParameter("readerId");
+                bookId = request.getParameter("bookId");
                 reader = readerFacade.find(new Long(readerId));
                 book = bookFacade.find(Long.parseLong(bookId));
-                Calendar c = new GregorianCalendar();
-                History history = new History(reader, book, c.getTime(), null);
-                historyFacade.create(history);
+                if(book.getCount() > 0){
+                    book.setCount(book.getCount()-1);
+                    bookFacade.edit(book);
+                    History history = new History(reader, book, c.getTime(), null);
+                    historyFacade.create(history);
+                    request.setAttribute("info", "Книга выдана");
+                }else{
+                    request.setAttribute("info", "Книга не выдана. Все книни читаются");
+                }
                 request.getRequestDispatcher("/index.jsp")
                         .forward(request, response);
                 break;
             case "/showReturnBook":
-                List<History> listHistories = historyFacade.findAll();
+                listHistories = historyFacade.findNotReturnBooks();
                 request.setAttribute("listHistories", listHistories);
                 request.getRequestDispatcher("/showReturnBook.jsp")
                         .forward(request, response);
                 break;
             case "/returnBook":
-                
+                String historyId = request.getParameter("historyId");
+                History history = historyFacade.find(new Long(historyId));
+                book = history.getBook();
+                book.setCount(book.getCount()+1);
+                bookFacade.edit(book);
+                c = new GregorianCalendar();
+                history.setDateReturnBook(c.getTime());
+                historyFacade.edit(history);
+                request.getRequestDispatcher("/showReturnBook")
+                        .forward(request, response);
                 break;
+            
         }
         
     }
