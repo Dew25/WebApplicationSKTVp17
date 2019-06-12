@@ -49,11 +49,22 @@ public class SecurityController extends HttpServlet {
                 break;
             case "/login":
                 String login = request.getParameter("login");
+                User enteredUser = userFacade.findByLogin(login);
+                if(enteredUser == null){
+                    request.setAttribute("info", "Такого пользователя нет.");
+                    request.getRequestDispatcher("/index.jsp")
+                        .forward(request, response);
+                }
                 String password = request.getParameter("password");
-                if("admin".equals(login) && "123123".equals(password)){
+                if(password.equals(enteredUser.getPassword())){
                     HttpSession session = request.getSession(true);
-                    session.setAttribute("enteredUser", "admin");
-                    request.setAttribute("info", "Вы вошли как admin");
+                    session.setAttribute("enteredUser", enteredUser);
+                    request.setAttribute("info", 
+                            "Вы вошли как "
+                            + enteredUser.getReader().getName()
+                            + " "
+                            + enteredUser.getReader().getSurname()
+                    );
                 }
                 request.getRequestDispatcher("/index.jsp")
                         .forward(request, response);
@@ -77,15 +88,28 @@ public class SecurityController extends HttpServlet {
                 String phone = request.getParameter("phone");
                 login = request.getParameter("login");
                 password = request.getParameter("password");
+                User user = userFacade.findByLogin(login);
+                if(user != null){
+                    request.setAttribute("info", "Такой логин уже используется");
+                    request.getRequestDispatcher("/index.jsp")
+                        .forward(request, response);
+                    break;
+                }
                 Reader reader = new Reader(
                         name, 
                         surname, 
                         phone
                 );
                 readerFacade.create(reader);
-                User user = new User(login, password, reader);
+                user = new User(login, password, reader);
                 userFacade.create(user);
-                request.setAttribute("info", "Новый читатель добавлен");
+                request.setAttribute(
+                        "info", "Новый читатель, "
+                        + user.getReader().getName()
+                        + " "
+                        + user.getReader().getSurname()
+                        +", добавлен."
+                );
                 request.getRequestDispatcher("/index.jsp")
                         .forward(request, response);
                 break;

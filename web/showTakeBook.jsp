@@ -1,6 +1,6 @@
 
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
-    <div class="w-75 margin-container p-3 text-center">
+    <div class="w-75 margin-container-center p-3 text-center">
         <h4 class="w-100  mb-5">Выдаем книгу</h4>
         <form action="createHistory" method="POST">
             <div class="w-100">

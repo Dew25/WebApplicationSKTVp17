@@ -8,6 +8,7 @@ package controller;
 import entity.Book;
 import entity.History;
 import entity.Reader;
+import entity.User;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
@@ -61,8 +62,8 @@ public class WebController extends HttpServlet {
                         .forward(request, response);
                 return;
         }
-        String enteredUser = (String) session.getAttribute("enteredUser");
-        if(!"admin".equals(enteredUser)){
+        User enteredUser =  (User) session.getAttribute("enteredUser");
+        if(enteredUser == null){
             request.getRequestDispatcher("/showLogin.jsp")
                         .forward(request, response);
                 return;
